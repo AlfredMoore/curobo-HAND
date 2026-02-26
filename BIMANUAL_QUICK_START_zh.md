@@ -7,7 +7,15 @@
 robot_description/composites/generate_bimanual_panda_tesollo.py
 ```
 - 从单臂URDF生成双臂URDF的Python脚本
-- 可复用，参数可调
+- 可复用，参数可调——其中生成的双臂位置可以通过调节`generate_bimanual_panda_tesollo.py`中的以下参数
+```python
+create_bimanual_urdf(
+    single_arm_urdf_path=single_arm_urdf,
+    output_path=output_urdf,
+    left_position=(-0.558, -0.092, 0.0225),
+    right_position=(0.5588, -0.092, 0.0225)
+)
+```
 
 ### 2. 双臂URDF
 ```bash
@@ -63,6 +71,43 @@ python examples/bimanual_motion_gen_example.py
 - `bimanual_trajectory.usd` - 包含轨迹和碰撞球的可视化文件
 
 ### 2. 可视化碰撞球（Collision Spheres）
+#### i.使用[bubblify](https://github.com/bheijden/bubblify?tab=readme-ov-file)(最方便)
+Install Bubblify directly from PyPI:
+
+```bash
+pip install bubblify
+```
+
+##### Basic Usage
+
+Launch Bubblify with a URDF file:
+
+```bash
+bubblify --urdf_path path/to/your/robot.urdf
+```
+
+##### Command Line Options
+
+- `--urdf_path` (required): Path to the URDF file to spherize
+- `--spherization_yml` (optional): Load an existing spherization configuration
+- `--port` (optional): Port for the web interface (default: 8080)
+- `--show_collision` (optional): Display collision meshes (default: False)
+
+##### Example Commands
+
+```bash
+# Basic usage
+bubblify --urdf_path ./assets/xarm6/xarm6_rs.urdf
+
+# Load with existing spherization
+bubblify --urdf_path ./assets/xarm6/xarm6_rs.urdf --spherization_yml ./config/xarm6_spheres.yml
+
+# Custom port and show collision meshes
+bubblify --urdf_path ./robot.urdf --port 8081 --show_collision
+```
+
+#### ii.生成usd后可视化
+
 ```bash
 # 静态可视化（官方方法）
 python examples/visualize_spheres_official.py
