@@ -14,18 +14,6 @@ its affiliates is strictly prohibited.
 
 ---
 
-## 📋 核心问题复盘
-
-在 Isaac Lab 或类似的 Conda 环境中，直接运行 `pip install -e .` 通常会失败，主要原因如下：
-
-1.  **编译器缺失**：PyTorch 分发的 CUDA 仅包含 Runtime 库，不包含编译自定义 C++/CUDA 算子所需的 `nvcc`。
-2.  **路径深埋**：Conda 安装的 `cuda-toolkit` 并没有将头文件放在标准路径，而是存放在：`$CONDA_PREFIX/targets/x86_64-linux/include`。
-3.  **环境冲突**：Conda 环境内的 `libstdc++.so.6` 版本可能低于编译工具（如 `ninja`）的需求。
-
-
-
----
-
 ## 🛠️ 1. 环境准备 (环境内补全)
 
 首先需要在激活的 Conda 环境中，安装完整的开发工具链。建议版本与你的显卡驱动及 PyTorch 支持版本匹配（示例为 CUDA 12.4）。
@@ -47,27 +35,24 @@ conda install -c conda-forge libstdcxx-ng
 为了让编译器能够“看见”深埋在 Conda 目录中的头文件，必须在编译前手动注入环境变量。
 应该不需要那么多环境变量，本模块暂时未经测试。
 ```bash
-# 1. 进入项目根目录
-cd /path/to/curobo-HAND
+# 进入项目根目录
+cd /path/to/curobo
+# 清理旧的编译残余 (如果存在该文件夹的话，非常重要)
+rm -rf build/ src/*.egg-info/
 
-# 2. 设置 CUDA 根目录变量
+# 确保基础路径
 export CUDA_HOME=$CONDA_PREFIX
 export PATH=$CONDA_PREFIX/bin:$PATH
 
-# 3. 显式注入深层头文件路径 (解决 fatal error: cuda_runtime_api.h 找不到的问题)
-export CPATH=$CONDA_PREFIX/targets/x86_64-linux/include:$CPATH
-export C_INCLUDE_PATH=$CONDA_PREFIX/targets/x86_64-linux/include:$C_INCLUDE_PATH
-export CPLUS_INCLUDE_PATH=$CONDA_PREFIX/targets/x86_64-linux/include:$CPLUS_INCLUDE_PATH
+# 定义路径
+TARGET_INC="/workspace/miniconda_data/envs/policy_node/targets/x86_64-linux/include"
+TARGET_LIB="/workspace/miniconda_data/envs/policy_node/targets/x86_64-linux/lib"
 
-# 4. 注入动态库搜索路径 (运行时必须)
-export LD_LIBRARY_PATH=$CONDA_PREFIX/targets/x86_64-linux/lib:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+# 关键：在 zsh 中，我们通过 CPATH 解决，它最不挑剔语法
+export CPATH="$TARGET_INC:$CPATH"
+export LD_LIBRARY_PATH="$TARGET_LIB:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
 
-# 5. 清理旧的编译残余 (如果存在该文件夹的话，非常重要)
-rm -rf build/ src/*.egg-info/
-
-# 6. 执行带路径参数的安装
-CFLAGS="-I$CONDA_PREFIX/targets/x86_64-linux/include" \
-LDFLAGS="-L$CONDA_PREFIX/targets/x86_64-linux/lib" \
+# 安装
 pip install -e . --no-build-isolation
 ```
 
