@@ -19,6 +19,9 @@ its affiliates is strictly prohibited.
 首先需要在激活的 Conda 环境中，安装完整的开发工具链。建议版本与你的显卡驱动及 PyTorch 支持版本匹配（示例为 CUDA 12.4）。
 
 ```bash
+# 强行使用channel conda-forge，Ninja可以帮助寻找当前环境的cuda runtime header，加速编译
+conda install ninja -c conda-forge --override-channels
+
 # 安装编译器、开发头文件及构建工具
 conda install -c nvidia cuda-nvcc=12.4 cuda-toolkit=12.4
 
