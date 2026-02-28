@@ -14,7 +14,7 @@ its affiliates is strictly prohibited.
 
 ---
 
-## 🛠️ 1. 环境准备 (环境内补全)
+## 环境准备 (环境内补全)
 
 首先需要在激活的 Conda 环境中，安装完整的开发工具链。建议版本与你的显卡驱动及 PyTorch 支持版本匹配（示例为 CUDA 12.4）。
 
@@ -28,9 +28,7 @@ conda install -c conda-forge libstdcxx-ng
 
 ---
 
-### 第三部分：安装命令（最核心部分）
-```markdown
-## 🚀 2. 编译与安装步骤
+## 编译与安装步骤
 
 为了让编译器能够“看见”深埋在 Conda 目录中的头文件，必须在编译前手动注入环境变量。
 应该不需要那么多环境变量，本模块暂时未经测试。
@@ -58,8 +56,7 @@ pip install -e . --no-build-isolation
 
 ---
 
-### 第四部分：报错排查表格
-## 🔍 3. 常见报错排查 (Troubleshooting)
+## 报错排查表格
 
 | 报错信息 | 可能原因 | 解决方法 |
 | :--- | :--- | :--- |
@@ -75,6 +72,73 @@ pip install -e . --no-build-isolation
 ```bash
 # 这样每次 conda activate 该环境时，库路径会自动补全
 conda env config vars set LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$CONDA_PREFIX/targets/x86_64-linux/lib -->
+
+
+# Installation Tips (English)
+
+This guide addresses common issues when installing **cuRobo** inside an isolated Conda environment (e.g., `env_isaaclab`), including:
+
+- Missing CUDA compiler paths  
+- Header file errors such as `cuda_runtime.h: No such file`  
+- C++ standard library version conflicts (e.g., `GLIBCXX` errors)  
+
+---
+
+## Environment Preparation (Complete Toolchain Inside Conda)
+
+First, ensure that a full CUDA development toolchain is installed inside the activated Conda environment.  
+The CUDA version should match your GPU driver and PyTorch CUDA version (example below uses CUDA 12.4).
+
+```bash
+# Install compiler, development headers, and build tools
+conda install -c nvidia cuda-nvcc=12.4 cuda-toolkit=12.4
+
+# Fix GLIBCXX version conflicts (resolves ninja runtime errors)
+conda install -c conda-forge libstdcxx-ng
+```
+
+---
+
+## Build and Installation Steps
+
+To ensure the compiler can “see” header files deeply nested inside the Conda directory,  
+you must manually inject the required environment variables before building.
+
+> Note: In many cases, not all of these environment variables are necessary.  
+> This configuration has not been fully tested in all environments.
+
+```bash
+# Navigate to the project root directory
+cd /path/to/curobo
+
+# Clean previous build artifacts (if the folder exists — very important)
+rm -rf build/ src/*.egg-info/
+
+# Ensure base CUDA paths
+export CUDA_HOME=$CONDA_PREFIX
+export PATH=$CONDA_PREFIX/bin:$PATH
+
+# Define include and library paths
+TARGET_INC="/workspace/miniconda_data/envs/policy_node/targets/x86_64-linux/include"
+TARGET_LIB="/workspace/miniconda_data/envs/policy_node/targets/x86_64-linux/lib"
+
+# Key step: In zsh, CPATH is the most robust way to inject include paths
+export CPATH="$TARGET_INC:$CPATH"
+export LD_LIBRARY_PATH="$TARGET_LIB:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+
+# Install
+pip install -e . --no-build-isolation
+
+---
+
+## Troubleshooting Table
+
+| Error Message | Possible Cause | Solution |
+|---------------|----------------|----------|
+| `cuda_runtime.h: No such file` | The compiler search path does not include the `targets` directory | Make sure you have executed the `export CPATH` step above, or pass include paths via `CFLAGS` during `pip install`. |
+| `GLIBCXX_3.4.32 not found` | The build toolchain is incompatible with the Conda C++ standard library version | Run `conda install libstdcxx-ng`. |
+| `CUDA_HOME not set` | The build script cannot locate the CUDA root directory | Run `export CUDA_HOME=$CONDA_PREFIX`. |
+| `ninja: build stopped` | Possibly insufficient memory or parallel build conflicts | Limit parallel jobs by running `MAX_JOBS=4 pip install -e .`. |
 
 # cuRobo
 
