@@ -19,10 +19,12 @@ its affiliates is strictly prohibited.
 首先需要在激活的 Conda 环境中，安装完整的开发工具链。建议版本与你的显卡驱动及 PyTorch 支持版本匹配（示例为 CUDA 12.4）。
 
 ```bash
+conda create -n curobo python=3.10 # 或者3.11以及其他版本均可
+
 # 强行使用channel conda-forge，Ninja可以帮助寻找当前环境的cuda runtime header，加速编译
 conda install ninja -c conda-forge --override-channels
 
-# 安装编译器、开发头文件及构建工具
+# 安装运行时的cuda编译器、开发头文件及构建工具
 conda install -c nvidia cuda-nvcc=12.4 cuda-toolkit=12.4
 
 # 修复 GLIBCXX 版本冲突 (解决 ninja 无法运行的问题)
@@ -33,6 +35,13 @@ conda install -c conda-forge libstdcxx-ng
 
 ## 编译与安装步骤
 
+寻找cuda头文件
+```bash
+find $CONDA_PREFIX -name cuda_runtime.h
+```
+
+注意：以下步骤是因为该指令找到的头文件位于`<miniconda_envs>/<env name>/targets/x86_64-linux/include/cuda_runtime.h`，如果头文件不在该目录下，得具体情况具体分析
+
 为了让编译器能够“看见”深埋在 Conda 目录中的头文件，必须在编译前手动注入环境变量。
 应该不需要那么多环境变量，本模块暂时未经测试。
 ```bash
@@ -41,19 +50,15 @@ cd /path/to/curobo
 # 清理旧的编译残余 (如果存在该文件夹的话，非常重要)
 rm -rf build/ src/*.egg-info/
 
-# 确保基础路径
+# 1. 明确指向 Conda 环境中的 CUDA 开发路径
 export CUDA_HOME=$CONDA_PREFIX
-export PATH=$CONDA_PREFIX/bin:$PATH
+export CPATH=$CONDA_PREFIX/targets/x86_64-linux/include:$CPATH
 
-# 定义路径
-TARGET_INC="/workspace/miniconda_data/envs/policy_node/targets/x86_64-linux/include"
-TARGET_LIB="/workspace/miniconda_data/envs/policy_node/targets/x86_64-linux/lib"
+# 2. 确保库文件路径也同步对齐
+export LIBRARY_PATH=$CONDA_PREFIX/targets/x86_64-linux/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/targets/x86_64-linux/lib:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 
-# 关键：在 zsh 中，我们通过 CPATH 解决，它最不挑剔语法
-export CPATH="$TARGET_INC:$CPATH"
-export LD_LIBRARY_PATH="$TARGET_LIB:$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
-
-# 安装
+# 3. 再次尝试安装
 pip install -e . --no-build-isolation
 ```
 
